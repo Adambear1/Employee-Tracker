@@ -18,7 +18,7 @@ connection.connect(err => {
 function runSearch() {
     inquirer.prompt({
         name: 'action',
-        type: 'rawlist',
+        type: 'list',
         message: 'What would you like to do?',
         choices: [
             'Add', 'View', 'Update'
@@ -91,7 +91,7 @@ function addEmployee() {
         {
             name: 'roleID',
             type: 'number',
-            message: 'What is the employees idenfication number?'
+            message: 'What is the employees identification number?'
         },
         {
             name: 'managerID',
@@ -99,12 +99,11 @@ function addEmployee() {
             message: 'What is the manangers identification number?'
         }]
     ).then(answer => {
-        var insert_employee_query = "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)"
+        var insert_employee_query = "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)";
         connection.query(insert_employee_query, [answer.firstname, answer.lastname, answer.roleID, answer.managerID]
-            , (err) => {
+            , (err, res) => {
                 if (err) throw err;
             })
-        runSearch()
     })
 }
 
@@ -151,6 +150,8 @@ function view() {
             case 'Roles':
                 viewRole()
                 break;
+            default:
+                runSearch()
 
         }
     })
