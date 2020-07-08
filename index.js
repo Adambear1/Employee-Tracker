@@ -1,230 +1,307 @@
-const inquirer = require('inquirer')
-const sql = require('mysql');
-// const util = require('util');
+const inquirer = require("inquirer");
+const db = require("./connection");
+const Query = require("./lib/Query");
+const questions = require("./lib/Questions");
+const cTable = require("console.table");
 
-const connection = sql.createConnection({
-    host: "localhost",
-    port: 3306,
-    user: "root",
-    password: "gemini253",
-    database: "homeworkdb"
-});
+// set variables for table instances
+let employeeQuery = Query.employeeQuery;
+let departmentQuery = Query.departmentQuery;
+let roleQuery = Query.roleQuery;
+let QueryClass = Query.Query;
 
-connection.connect(err => {
-    if (err) err;
-    runSearch()
-});
+init();
 
-function runSearch() {
-    inquirer.prompt({
-        name: 'action',
-        type: 'list',
-        message: 'What would you like to do?',
-        choices: [
-            'Add', 'View', 'Update'
-        ]
-    }).then(answer => {
-        switch (answer.action) {
-            case "Add":
-                add();
-                break;
-            case "View":
-                view();
-                break;
-            case "Update":
-                update();
-                break;
-        }
+function init() {
+  // find column values
+  findDeleteVals();
+  findColumnVals();
+  inquirer
+    .prompt(questions.toDoQuestion)
+    .then((data) => {
+      switch (data.toDoType) {
+        case "View all Employees":
+          employeeQuery.viewTable();
+          break;
+        case "View all Departments":
+          departmentQuery.viewTable();
+          break;
+        case "View all Roles":
+          roleQuery.viewTable();
+          break;
+        case "Add Employee":
+          employeeQuery.addToTable();
+          break;
+        case "Add Department":
+          departmentQuery.addToTable();
+          break;
+        case "Add Role":
+          roleQuery.addToTable();
+          break;
+        case "Remove Employee":
+          employeeQuery.deleteFromTable();
+          break;
+        case "Remove Department":
+          departmentQuery.deleteFromTable();
+          break;
+        case "Remove Role":
+          roleQuery.deleteFromTable();
+          break;
+        case "Update Employee Role":
+          employeeQuery.updateRole();
+          break;
+        case "Update Employee Manager":
+          employeeQuery.updateManager();
+          break;
+        case "View all Employees by Manager":
+          viewByManager();
+          break;
+        default:
+          db.end();
+      }
     })
-}
-//ADD
-function add() {
-    inquirer.prompt({
-        name: 'add',
-        type: 'list',
-        message: 'What would you like to add to?',
-        choices: ['Department', 'Employee', 'Roles']
-    }).then(answer => {
-        switch (answer.add) {
-            case "Department":
-                addDepartment();
-                break
-            case "Employee":
-                addEmployee();
-                break;
-            case 'Roles':
-                addRole()
-                break;
-
-        }
-    })
-}
-function addDepartment() {
-    inquirer.prompt({
-        name: 'departmentNAME',
-        type: 'input',
-        message: 'Please enter the department name you would like to add:'
-    })
-        .then(answer => {
-            var insert_department_query = "INSERT INTO department SET ?"
-            connection.query(insert_department_query, { name: answer.departmentNAME }, (err, res) => {
-                if (err) throw err;
-            })
-            runSearch()
-        })
-
+    .catch((err) => {
+      if (err) throw err;
+    });
 }
 
-function addEmployee() {
-    inquirer.prompt([
-        {
-            name: 'firstname',
-            type: 'input',
-            message: 'What is the employees first name?'
+// view table method
+QueryClass.prototype.viewTable = function () {
+  db.query(this.joinQuery, function (err, res) {
+    if (err) throw err;
+    console.log("\n");
+    console.table(res);
+    console.log("\n");
+    init();
+  });
+};
 
-        },
-        {
-            name: 'lastname',
-            type: 'input',
-            message: 'What is the employees last name?'
-        },
-        {
-            name: 'roleID',
-            type: 'number',
-            message: 'What is the employees identification number?'
-        },
-        {
-            name: 'managerID',
-            type: 'number',
-            message: 'What is the manangers identification number?'
-        }]
-    ).then(answer => {
-        var insert_employee_query = "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)";
-        connection.query(insert_employee_query, [answer.firstname, answer.lastname, answer.roleID, answer.managerID]
-            , (err, res) => {
-                if (err) throw err;
-            })
-    })
-}
+// delete method
+QueryClass.prototype.deleteFromTable = function () {
+  let choices = this.deleteQuestion.choices;
+  let type = this.table;
 
-function addRole() {
-    inquirer.prompt([
-        {
-            name: 'title',
-            type: 'input',
-            message: 'What is the title of the employee?'
+  inquirer.prompt(this.deleteQuestion).then((data) => {
+    let deleteVal;
 
-        },
-        {
-            name: 'salary',
-            type: 'number',
-            message: 'What is the employees starting salary?'
-        },
-        {
-            name: 'departmentID',
-            type: 'number',
-            message: 'What is the department identification number?'
-        }]).then(answer => {
-            var insert_role_query = "INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)"
-            connection.query(insert_role_query, [answer.title, answer.salary, answer.departmentID], (err, res) => {
-                if (err) throw err;
-            })
-            runSearch()
-        })
-}
-//VIEW
-function view() {
-    inquirer.prompt({
-        name: 'view',
-        type: 'list',
-        message: 'What would you like to view?',
-        choices: ['Department', 'Employee', 'Roles']
-    }).then(answer => {
-        switch (answer.view) {
-            case "Department":
-                viewDepartment();
-                break;
-            case "Employee":
-                viewEmployee();
-                break;
-            case 'Roles':
-                viewRole()
-                break;
-            default:
-                runSearch()
+    if (this.table === "employee") {
+      let name = Object.values(data)[0];
+      deleteVal = name.split(" ")[0];
+    } else {
+      deleteVal = Object.values(data);
+    }
 
-        }
-    })
-}
-function viewDepartment() {
-    connection.query("SELECT * FROM department ORDER BY id", (err, result) => {
+    // delete from database
+    db.query(
+      `DELETE FROM ${this.table} WHERE ${this.columns[0]}=?;`,
+      [deleteVal],
+      function (err, res) {
         if (err) throw err;
-        console.table(result)
-    })
-    runSearch()
-}
-function viewEmployee() {
-    connection.query("SELECT * FROM employee ORDER BY id", (err, result) => {
-        if (err) throw err;
-        console.table(result)
-    })
-    runSearch()
-}
-function viewRole() {
-    connection.query("SELECT * FROM role ORDER BY id", (err, result) => {
-        if (err) throw err;
-        console.table(result)
-    })
-    runSearch()
-}
-//UPDATE
-function update() {
-    inquirer.prompt([{
-        name: 'update',
-        type: 'list',
-        message: 'What would you like to update?',
-        choices: ['Department', 'Employee', 'Roles']
-    }]).then(answer => {
-        switch (answer.update) {
-            case "Department":
-                updateDepartment();
-                break;
-            case "Employee":
-                updateEmployee();
-                break;
-            case 'Roles':
-                updateRole()
-                break;
-        }
-    })
-}
+        console.log(`\n${type} deleted!\n`);
 
-function updateDepartment() {
-    connection.query("SELECT * FROM department", (err, response) => {
-        console.table(response)
-    }).then(
-        inquirer.prompt([
-            {
-                name: 'departmentID',
-                type: 'input',
-                message: 'Which department id value would you like to update?'
-            },
-            {
-                name: 'newValue',
-                type: 'input',
-                message: 'What new value would you like to insert instead?'
+        // delete from choices array
+        for (var i = 0; i < choices.length; i++) {
+          if (choices[i] == deleteVal) {
+            choices.splice(i, 1);
+          }
+        }
+
+        findDeleteVals();
+        init();
+      }
+    );
+  });
+};
+
+// update employee role
+employeeQuery.updateRole = function () {
+  inquirer.prompt(questions.updateEmpQ).then((data) => {
+    // set user response to variables
+    let { updateEmployee, updateRole } = data;
+    let fullName = updateEmployee.split(" ");
+
+    // query from role table to correlate employee.role_id with role name
+    db.query(`SELECT * FROM role`, function (err, res) {
+      if (err) throw err;
+      for (var i = 0; i < res.length; i++) {
+        if (updateRole === res[i].name) {
+          // update employee role
+          db.query(
+            `UPDATE employee SET role_id=${res[i].id} WHERE first_name="${fullName[0]}" AND last_name="${fullName[1]}";`,
+            function (err, res) {
+              if (err) throw err;
+              console.log(`\nEmployee Role Updated!\n`);
+              init();
             }
-        ])).then(answer => {
-            var update_department_query = "UPDATE department SET name = ? WHERE id = ?";
-            connection.query(update_department_query, [answer.newValue], [+answer.departmentID], (err, res) => {
-                if (err) throw err;
-            })
-            runSearch()
-        })
+          );
+        }
+      }
+    });
+  });
+};
+
+employeeQuery.updateManager = function () {
+  inquirer.prompt(questions.updateEmpManager).then((data) => {
+    // set user response to variables - split names
+    let { updateEmpName, updateEmpManager } = data;
+    let fullManName = updateEmpManager.split(" ");
+    let fullName = updateEmpName.split(" ");
+    let managerID;
+
+    // find manager id in employees array
+    db.query(`SELECT * FROM employee`, function (err, result) {
+      if (err) throw err;
+
+      for (var i = 0; i < result.length; i++) {
+        if (
+          fullManName[0] == result[i].first_name &&
+          fullManName[1] == result[i].last_name
+        ) {
+          managerID = result[i].id;
+        }
+      }
+
+      // update based on manager id
+      db.query(
+        `UPDATE employee SET manager_id=${managerID} WHERE first_name="${fullName[0]}" AND last_name="${fullName[1]}";`,
+        function (err, res) {
+          if (err) throw err;
+          console.log(`\nEmployee Manager Updated!\n`);
+          init();
+        }
+      );
+    });
+  });
+};
+
+// employee add to table
+employeeQuery.addToTable = function () {
+  let table = this.table;
+  let columns = this.columns;
+  let params = [];
+
+  this.askQuestions().then((data) => {
+    params.push(Object.values(data)[0]);
+    params.push(Object.values(data)[1]);
+
+    // find role name from role table, based on employee.role_id
+    db.query(`SELECT * FROM role`, function (err, res) {
+      if (err) throw err;
+
+      for (var i = 0; i < res.length; i++) {
+        if (Object.values(data)[2] == res[i].name) {
+          params.push(res[i].id);
+        }
+      }
+
+      let managerName = Object.values(data)[3];
+      let nameArr = managerName.split(" ");
+
+      // find manager name from employee table based on employee.manager_id
+      db.query(`SELECT * FROM employee`, function (err, result) {
+        if (err) throw err;
+
+        for (var i = 0; i < result.length; i++) {
+          if (
+            nameArr[0] == result[i].first_name &&
+            nameArr[1] == result[i].last_name
+          ) {
+            params.push(result[i].id);
+          }
+        }
+
+        // insert values into table
+        db.query(
+          `INSERT INTO ${table} (${columns}) VALUES (?);`,
+          [params],
+          function (err, res) {
+            if (err) throw err;
+            console.log(`\nNew ${table} added!\n`);
+            init();
+          }
+        );
+      });
+    });
+  });
+};
+
+departmentQuery.addToTable = function () {
+  this.askQuestions().then((data) => {
+    let params = Object.values(data);
+    let table = this.table;
+    db.query(
+      `INSERT INTO ${this.table} (${this.columns}) VALUES (?);`,
+      [params],
+      function (err, res) {
+        if (err) throw err;
+        console.log(`\nNew ${table} added!\n`);
+        init();
+      }
+    );
+  });
+};
+
+roleQuery.addToTable = function () {
+  let columns = this.columns;
+  let params = [];
+
+  this.askQuestions().then((data) => {
+    params.push(Object.values(data)[0]);
+    params.push(Object.values(data)[1]);
+
+    // find department name from department table, based on role.department_id
+    db.query(`SELECT * FROM department`, function (err, res) {
+      if (err) throw err;
+
+      for (var i = 0; i < res.length; i++) {
+        if (Object.values(data)[2] == res[i].name) {
+          params.push(res[i].id);
+        }
+      }
+
+      // insert new role into role table
+      db.query(`INSERT INTO role (${columns}) VALUES (?);`, [params], function (
+        err,
+        res
+      ) {
+        if (err) throw err;
+        console.log(`\nNew role added!\n`);
+        init();
+      });
+    });
+  });
+};
+
+// view employees by manager
+function viewByManager() {
+  db.query(
+    `SELECT CONCAT_WS(" ", m.first_name, m.last_name) AS manager, CONCAT_WS(" ", e.first_name, e.last_name) AS employee
+        FROM employee e
+        INNER JOIN employee m ON m.id = e.manager_id
+        ORDER BY manager;`,
+    function (err, res) {
+      if (err) throw err;
+      console.log("\n");
+      console.table(res);
+      console.log("\n");
+      init();
+    }
+  );
 }
 
-            // )).then(answer => {
-            //     var update_department_query = "UPDATE department SET department = ? WHERE department = ?";
-            //     connection.query(update_department_query, [answer.])
-            // })
+// find column values for delete dropdown, call at init
+function findDeleteVals() {
+  roleQuery.findColVals("name", roleQuery.deleteQuestion.choices);
+  departmentQuery.findColVals("name", departmentQuery.deleteQuestion.choices);
+  employeeQuery.findColVals(
+    "first_name, last_name",
+    employeeQuery.deleteQuestion.choices
+  );
+}
 
+// find column values for dropdown, call at init
+function findColumnVals() {
+  roleQuery.findColVals("name", questions.roleArr);
+  departmentQuery.findColVals("name", questions.departmentArr);
+  employeeQuery.findColVals("first_name, last_name", questions.employeeArr);
+}
