@@ -1,8 +1,11 @@
 {
-  "name": "Employee-Tracker",
+  "name": "employee-tracker",
   "version": "1.0.0",
-  "description": "",
+  "description": "A command-line employee CMS",
   "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,8 +13,10 @@
     "type": "git",
     "url": "git+https://github.com/Adambear1/Employee-Tracker.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "CMS"
+  ],
+  "author": "Joanna Preston",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Adambear1/Employee-Tracker/issues"
@@ -19,13 +24,8 @@
   "homepage": "https://github.com/Adambear1/Employee-Tracker#readme",
   "dependencies": {
     "console.table": "^0.10.0",
-    "express": "^4.17.1",
-    "express-handlebars": "^4.0.4",
-    "inquirer": "^7.3.0",
-    "inquirer-autocomplete-prompt": "^1.0.2",
-    "mysql": "^2.18.1",
-    "nodemon": "^2.0.4",
-    "request": "^2.88.2",
-    "util": "^0.12.3"
+    "dotenv": "^8.2.0",
+    "inquirer": "^7.1.0",
+    "mysql": "^2.18.1"
   }
 }

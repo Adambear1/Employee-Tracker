@@ -1,5 +1,5 @@
 const inquirer = require("inquirer");
-const db = require("./connection");
+const db = require("./server_db");
 const Query = require("./lib/Query");
 const questions = require("./lib/Questions");
 const cTable = require("console.table");
